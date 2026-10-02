@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <title>🌾 Mandi Fast Ledger v12</title>
+    <style>
+        :root {
+            --primary: #1b5e20;
+            --primary-surface: #e8f5e9;
+            --accent: #0d47a1;
+            --alert: #b71c1c;
+            --alert-bg: #ffebee;
+            --warning: #e65100;
+            --warning-bg: #fff3e0;
+            --dark: #1a1a1a;
+            --gray: #f9f9f9;
+            --border: #dcdcdc;
+            --dash-bg: #102a43;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, BlinkMacSystemFont, sans-serif; }
+        body { background-color: #f4f6f8; color: var(--dark); padding: 8px; padding-bottom: 40px; }
+        .app-container { max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); overflow: hidden; }
+        
+        /* App Bar */
+        .app-bar { background: var(--primary); color: white; padding: 14px; display: flex; justify-content: space-between; align-items: center; }
+        .app-bar h1 { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.5px; }
+        .lang-select { background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; outline: none; cursor: pointer; }
+        .lang-select option { color: var(--dark); }
+        
+        /* Persistent Key Verification Bar */
+        .key-drawer { padding: 10px 14px; background: #eef2f3; border-bottom: 1px solid var(--border); display: flex; gap: 6px; align-items: center; }
+        .key-drawer label { font-size: 0.75rem; font-weight: bold; color: #444; white-space: nowrap; }
+        .key-drawer input { flex: 1; padding: 10px; border: 1px solid #b0bec5; border-radius: 8px; font-size: 0.9rem; background: #fff; outline: none; }
+        .btn-verify-key { background: var(--primary); color: white; border: none; padding: 9px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
+        .key-status-badge { font-size: 0.75rem; font-weight: bold; padding: 4px 8px; border-radius: 6px; white-space: nowrap; }
+
+        /* Dynamic Executive Dashboard & Interactive Filter Console Deck */
+        .dash-container { background: var(--dash-bg); color: white; padding: 14px; border-bottom: 1px solid var(--border); }
+        .dash-title { font-size: 0.8rem; font-weight: bold; letter-spacing: 1px; color: #9fb3c8; margin-bottom: 10px; text-transform: uppercase; }
+        
+        /* Filter Control Matrix */
+        .filter-deck { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; background: rgba(255,255,255,0.06); padding: 8px; border-radius: 8px; }
+        .filter-box { display: flex; flex-direction: column; gap: 3px; }
+        .filter-box label { font-size: 0.65rem; font-weight: bold; color: #bcccdc; text-transform: uppercase; }
+        .filter-box select { padding: 6px; background: #1f3a52; color: #fff; border: 1px solid #334e68; border-radius: 4px; font-size: 0.75rem; outline: none; }
+
+        /* Metric Grid Architecture */
+        .dash-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .dash-card { background: rgba(255,255,255,0.08); border-radius: 8px; padding: 10px; border-left: 4px solid var(--primary-surface); }
+        .dash-card.total-amt { border-left-color: #38bdf8; }
+        .dash-card.paid-amt { border-left-color: #4ade80; }
+        .dash-card.pending-amt { border-left-color: #f87171; }
+        .dash-card.vol-amt { border-left-color: #fb7185; }
+        .dash-card.bags-amt { border-left-color: #fbbf24; }
+        .dash-card.people-amt { border-left-color: #c084fc; }
+        .dash-label { font-size: 0.65rem; color: #bcccdc; text-transform: uppercase; font-weight: bold; margin-bottom: 2px; }
+        .dash-val { font-size: 1.05rem; font-weight: 800; color: #fff; }
+
+        /* Scanning Trigger Zone Layout Split */
+        .scan-zone { padding: 14px; background: #fff; border-bottom: 1px solid var(--border); text-align: center; }
+        .scan-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px; }
+        .btn-capture { background: var(--accent); color: white; border: none; padding: 16px 10px; border-radius: 10px; font-size: 0.9rem; font-weight: bold; position: relative; cursor: pointer; box-shadow: 0 2px 6px rgba(13,71,161,0.2); display: flex; justify-content: center; align-items: center; gap: 4px; }
+        .btn-capture.gallery-variant { background: #455a64; box-shadow: 0 2px 6px rgba(69,90,100,0.2); }
+        .hidden-file-input { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+        
+        /* Loader Overlays & Live Debug Log */
+        .loader-text { display: none; margin-top: 12px; font-size: 0.85rem; font-weight: 600; color: var(--accent); animation: flashText 1.5s infinite; }
+        .debug-err-box { display: none; margin-top: 10px; padding: 10px; background: var(--alert-bg); border: 1px solid var(--alert); color: var(--alert); border-radius: 8px; font-size: 0.8rem; text-align: left; font-family: monospace; overflow-x: auto; }
+        @keyframes flashText { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+        /* Meta Forms */
+        .form-section { padding: 14px; border-bottom: 1px solid var(--border); }
+        .row-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .field-box { display: flex; flex-direction: column; gap: 3px; }
+        .field-box label { font-size: 0.75rem; font-weight: 700; color: #555; text-transform: uppercase; }
+        .field-box input, .field-box select { padding: 11px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: #fff; color: var(--dark); }
+
+        /* Performance Weights Matrix Grid */
+        .matrix-header { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: #666; margin-bottom: 8px; padding: 0 4px; }
+        .matrix-scroll { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-height: 140px; overflow-y: auto; padding: 6px; background: #eeeeee; border-radius: 10px; border: 1px solid var(--border); }
+        .cell-item { background: white; border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; padding: 6px; }
+        .cell-idx { font-size: 0.7rem; color: #999; width: 22px; font-weight: bold; }
+        .cell-val { width: 100%; border: none; font-size: 0.95rem; font-weight: 700; text-align: right; outline: none; color: var(--dark); }
+        
+        /* High Alert Deviation States */
+        .alert-flash { background-color: var(--warning-bg) !important; border: 1px solid var(--warning) !important; color: var(--warning) !important; }
+
+        /* Dynamic Receipt Panel */
+        .receipt-card { background: var(--gray); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 10px; }
+        .receipt-line { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px; }
+        .receipt-line.bold-total { font-weight: 800; font-size: 1.15rem; border-top: 2px dashed #bbb; padding-top: 8px; margin-top: 8px; color: var(--primary); }
+        
+        .badge-count { background: var(--primary-surface); color: var(--primary); padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
+        .btn-submit { width: 100%; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; font-size: 1.05rem; font-weight: bold; margin-top: 12px; cursor: pointer; box-shadow: 0 2px 6px rgba(27,94,32,0.2); }
+
+        /* Historic Ledger Component Data Table */
+        .history-box { padding: 14px; background: #fff; }
+        .history-topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .history-topbar h3 { font-size: 0.9rem; font-weight: bold; color: var(--dark); text-transform: uppercase; }
+        .btn-export { background: #e65100; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        
+        .history-scroll-panel { max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--gray); }
+        .history-item { padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+        .history-item:last-child { border-bottom: none; }
+        .history-meta-details span { display: block; }
+        .hist-title { font-weight: bold; color: var(--dark); }
+        .hist-subtitle { font-size: 0.75rem; color: #666; }
+        .hist-financials { text-align: right; font-weight: bold; }
+        .hist-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-top: 2px; display: inline-block; }
+
+        /* Auto Popup Modal Styling */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center; padding: 20px; }
+        .modal-card { background: white; width: 100%; max-width: 400px; border-radius: 16px; padding: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); animation: slideUp 0.3s cubic-bezier(0.1, 0.8, 0.3, 1); }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-title { font-size: 1.2rem; font-weight: bold; color: var(--primary); margin-bottom: 12px; border-bottom: 2px solid var(--primary-surface); padding-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .modal-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 0.95rem; }
+        .modal-row span:first-child { font-weight: bold; color: #555; }
+        .modal-row span:last-child { font-weight: 700; color: var(--dark); }
+        .modal-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; font-size: 1rem; font-weight: bold; margin-top: 16px; cursor: pointer; }
+        /* ===== Scanned Entries Dashboard ===== */
+        .scan-dash { background: #0b3b3c; color: #fff; padding: 14px; border-bottom: 1px solid var(--border); }
+        .sd-head { display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; }
+        .sd-head .dash-title { margin-bottom: 0; color: #9ee7e0; }
+        #sdChevron { font-size: 1rem; color: #9ee7e0; }
+        #sdBody { margin-top: 10px; }
+        .scan-dash .filter-deck { grid-template-columns: 1fr 1fr; }
+        .scan-dash .filter-box.wide { grid-column: span 2; }
+        .scan-dash .filter-box select, .scan-dash .filter-box input { padding: 7px; background: #134e4f; color: #fff; border: 1px solid #1f6b6c; border-radius: 4px; font-size: 0.78rem; outline: none; width: 100%; }
+        .scan-dash .filter-box input::placeholder { color: #8fc9c4; }
+        .scan-dash .filter-box label { color: #a8dcd6; }
+        .sd-card-a { border-left-color: #5eead4 !important; }
+        .sd-card-b { border-left-color: #fbbf24 !important; }
+        .sd-card-c { border-left-color: #60a5fa !important; }
+        .sd-card-d { border-left-color: #c084fc !important; }
+        .sd-card-e { border-left-color: #fb923c !important; }
+        .sd-card-f { border-left-color: #4ade80 !important; }
+        .sd-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin: 12px 0 8px; flex-wrap: wrap; }
+        .sd-count { font-size: 0.72rem; color: #a8dcd6; font-weight: bold; }
+        .sd-btn { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.35); padding: 6px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: bold; cursor: pointer; }
+        .sd-btn.danger { border-color: #fca5a5; color: #fecaca; }
+        .sd-list { background: #fff; color: var(--dark); border-radius: 8px; max-height: 360px; overflow-y: auto; }
+        .sd-item { padding: 10px 12px; border-bottom: 1px solid #eee; }
+        .sd-item:last-child { border-bottom: none; }
+        .sd-row1 { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+        .sd-name { font-weight: 700; font-size: 0.88rem; word-break: break-word; }
+        .sd-sub { font-size: 0.72rem; color: #666; margin-top: 2px; }
+        .sd-err { font-size: 0.7rem; color: var(--alert); margin-top: 3px; word-break: break-word; }
+        .sd-badge { font-size: 0.66rem; font-weight: bold; padding: 3px 7px; border-radius: 10px; white-space: nowrap; }
+        .sd-badge.scanned { background: var(--warning-bg); color: var(--warning); }
+        .sd-badge.committed { background: var(--primary-surface); color: var(--primary); }
+        .sd-badge.failed { background: var(--alert-bg); color: var(--alert); }
+        .sd-actions { display: flex; gap: 6px; margin-top: 6px; }
+        .sd-act { border: 1px solid var(--border); background: #fafafa; border-radius: 6px; padding: 5px 10px; font-size: 0.72rem; font-weight: bold; cursor: pointer; color: var(--dark); }
+        .sd-act.load { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .sd-act.del { color: var(--alert); }
+        .sd-empty { text-align: center; color: #888; padding: 26px 12px; font-size: 0.82rem; }
+        /* ===== Offline quick-entry + slip viewer ===== */
+        .entry-pad { display: flex; gap: 6px; margin-bottom: 6px; }
+        .entry-pad input { flex: 1; min-width: 0; padding: 14px 10px; font-size: 1.25rem; font-weight: 700; border: 2px solid var(--accent); border-radius: 10px; outline: none; }
+        .entry-pad input.bad { border-color: var(--alert); background: var(--alert-bg); }
+        .entry-pad button { border: none; border-radius: 10px; padding: 0 14px; font-weight: bold; font-size: 0.85rem; cursor: pointer; }
+        .entry-pad .qw-add { background: var(--primary); color: #fff; }
+        .entry-pad .qw-undo { background: #eceff1; color: #37474f; }
+        .qw-meta { font-size: 0.78rem; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+        .qw-hint { font-size: 0.7rem; color: #777; margin-bottom: 8px; }
+        .slip-viewer { display: none; margin-top: 12px; text-align: left; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+        .sv-head { display: flex; justify-content: space-between; align-items: center; background: #eceff1; padding: 6px 10px; font-size: 0.72rem; font-weight: bold; color: #37474f; }
+        .sv-head button { border: none; background: transparent; font-size: 1rem; cursor: pointer; }
+        .sv-box { max-height: 280px; overflow: auto; background: #000; }
+        .sv-box img { width: 100%; display: block; }
+        .sv-box img.zoomed { width: 220%; max-width: none; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="app-bar">
+        <h1 id="txtAppName">🌾 Mandi Fast Ledger v12</h1>
+        <select class="lang-select" id="langSelector" onchange="toggleLanguage(this.value)">
+            <option value="en">English</option>
+            <option value="hi">हिंदी</option>
+        </select>
+    </div>
+
+    <div class="key-drawer">
+        <label id="lblKeyInput">Key:</label>
+        <input type="password" id="globalApiKey" placeholder="Optional: Gemini key (AI scan)" onkeydown="if(event.key === 'Enter') processManualKeyVerification()">
+        <button type="button" class="btn-verify-key" id="btnVerifyText" onclick="processManualKeyVerification()">Verify</button>
+        <span id="keyStatusBadge" class="key-status-badge" style="background: #eceff1; color: #455a64;">📴 Offline</span>
+    </div>
+
+    <div class="dash-container">
+        <div class="dash-title" id="txtDashTitle">📊 Interactive Analytical Control Panel</div>
+        
+        <div class="filter-deck">
+            <div class="filter-box">
+                <label id="flbPeriod">Period</label>
+                <select id="filterPeriod" onchange="rebuildDashboardMetrics()">
+                    <option value="All">All Time</option>
+                    <option value="Today">Today</option>
+                    <option value="Past7">Past 7 Days</option>
+                </select>
+            </div>
+            <div class="filter-box">
+                <label id="flbStatus">Status</label>
+                <select id="filterStatus" onchange="rebuildDashboardMetrics()">
+                    <option value="All">All Status</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Pending">Pending</option>
+                </select>
+            </div>
+            <div class="filter-box">
+                <label id="flbVariety">Variety</label>
+                <select id="filterVariety" onchange="rebuildDashboardMetrics()">
+                    <option value="All">All Varieties</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="dash-grid">
+            <div class="dash-card total-amt">
+                <div class="dash-label" id="lblDashAmt">Total Amount</div>
+                <div class="dash-val" id="dTotalAmount">₹ 0</div>
+            </div>
+            <div class="dash-card paid-amt">
+                <div class="dash-label" id="lblDashPaid">Total Paid</div>
+                <div class="dash-val" id="dTotalPaid">₹ 0</div>
+            </div>
+            <div class="dash-card pending-amt">
+                <div class="dash-label" id="lblDashPending">Pending Dues</div>
+                <div class="dash-val" id="dTotalPending">₹ 0</div>
+            </div>
+            <div class="dash-card vol-amt">
+                <div class="dash-label" id="lblDashVol">Total Net Volume</div>
+                <div class="dash-val" id="dTotalVolume">0.00 Qtl</div>
+            </div>
+            <div class="dash-card bags-amt">
+                <div class="dash-label" id="lblDashBags">Bags Purchased</div>
+                <div class="dash-val" id="dTotalBags">0 Bags</div>
+            </div>
+            <div class="dash-card people-amt">
+                <div class="dash-label" id="lblDashPeople">Total Farmers</div>
+                <div class="dash-val" id="dTotalPeople">0 Persons</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="scan-zone">
+        <div class="scan-grid">
+            <button class="btn-capture" id="txtBtnScanCam">
+                📸 LIVE CAMERA
+                <input type="file" class="hidden-file-input" id="cameraTrigger" accept="image/*" capture="environment">
+            </button>
+            <button class="btn-capture gallery-variant" id="txtBtnScanGal">
+                🖼️ GALLERY
+                <input type="file" class="hidden-file-input" id="galleryTrigger" accept="image/*">
+            </button>
+        </div>
+        <div id="loaderIndicator" class="loader-text">⚡ Processing Field Image with Google Server...</div>
+        <div id="debugErrorDisplay" class="debug-err-box"></div>
+        <div id="slipViewer" class="slip-viewer">
+            <div class="sv-head"><span><span data-i="svTitle">Slip photo (reference)</span> • <span data-i="svZoom">tap to zoom</span></span><button type="button" onclick="closeSlipViewer()">✕</button></div>
+            <div class="sv-box"><img id="svImg" alt="slip" onclick="this.classList.toggle('zoomed')"></div>
+        </div>
+    </div>
+
+    <div class="scan-dash" id="scanDash">
+        <div class="sd-head" onclick="toggleScanDash()">
+            <div class="dash-title" data-i="sdTitle">📷 Scanned Entries Dashboard</div>
+            <span id="sdChevron">▾</span>
+        </div>
+        <div id="sdBody">
+            <div class="filter-deck">
+                <div class="filter-box">
+                    <label data-i="sdPeriod">Period</label>
+                    <select id="sdFilterPeriod" onchange="renderScanDashboard()">
+                        <option value="All" data-i="sdAllTime">All Time</option>
+                        <option value="Today" data-i="sdToday">Today</option>
+                        <option value="Past7" data-i="sdPast7">Past 7 Days</option>
+                    </select>
+                </div>
+                <div class="filter-box">
+                    <label data-i="sdStatus">Status</label>
+                    <select id="sdFilterStatus" onchange="renderScanDashboard()">
+                        <option value="All" data-i="sdAllStatus">All Status</option>
+                        <option value="scanned" data-i="sdAwaiting">Awaiting Commit</option>
+                        <option value="committed" data-i="sdCommitted">Committed</option>
+                        <option value="failed" data-i="sdFailed">Failed</option>
+                    </select>
+                </div>
+                <div class="filter-box wide">
+                    <input type="search" id="sdSearch" data-ph="sdSearchPh" placeholder="Search farmer / village" oninput="renderScanDashboard()">
+                </div>
+            </div>
+            <div class="dash-grid">
+                <div class="dash-card sd-card-a"><div class="dash-label" data-i="sdTotalScans">Total Scans</div><div class="dash-val" id="sdTotalScans">0</div></div>
+                <div class="dash-card sd-card-b"><div class="dash-label" data-i="sdBags">Bags Scanned</div><div class="dash-val" id="sdBags">0</div></div>
+                <div class="dash-card sd-card-c"><div class="dash-label" data-i="sdGross">Gross Weight</div><div class="dash-val" id="sdGross">0.00 Qtl</div></div>
+                <div class="dash-card sd-card-d"><div class="dash-label" data-i="sdFarmers">Farmers</div><div class="dash-val" id="sdFarmers">0</div></div>
+                <div class="dash-card sd-card-e"><div class="dash-label" data-i="sdAwaitingLbl">Awaiting Commit</div><div class="dash-val" id="sdAwaiting">0</div></div>
+                <div class="dash-card sd-card-f"><div class="dash-label" data-i="sdCommittedLbl">Committed</div><div class="dash-val" id="sdCommitted">0</div></div>
+            </div>
+            <div class="sd-toolbar">
+                <span class="sd-count" id="sdCount"></span>
+                <span>
+                    <button type="button" class="sd-btn" onclick="exportScansToCsv()" data-i="sdExport">📤 Export CSV</button>
+                    <button type="button" class="sd-btn danger" onclick="clearAllScans()" data-i="sdClear">🗑 Clear</button>
+                </span>
+            </div>
+            <div class="sd-list" id="sdList"></div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="row-grid">
+            <div class="field-box">
+                <label id="lblFarmer">Farmer Name</label>
+                <input type="text" id="uiFarmerName" placeholder="Auto-Extracting...">
+            </div>
+            <div class="field-box">
+                <label id="lblVillage">Village / गांव</label>
+                <input type="text" id="uiVillage" placeholder="Auto-Extracting...">
+            </div>
+        </div>
+        <div class="row-grid">
+            <div class="field-box">
+                <label id="lblCrop">Crop Type</label>
+                <input type="text" id="uiCropType" value="Paddy">
+            </div>
+            <div class="field-box">
+                <label id="lblVariety">Crop Variety / किस्म</label>
+                <input type="text" id="uiCropVariety" placeholder="e.g. 1692">
+            </div>
+        </div>
+        <div class="row-grid">
+            <div class="field-box">
+                <label id="lblRate">Market Rate (₹/Qtl)</label>
+                <input type="number" id="uiMarketRate" value="2500" oninput="runMathPipeline()">
+            </div>
+            <div class="field-box">
+                <label id="lblStatus">Status</label>
+                <select id="uiPaymentStatus">
+                    <option value="Pending" id="optPending">❌ Pending / बकाया</option>
+                    <option value="Paid" id="optPaid">✅ Paid / चुकता</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="matrix-header">
+            <span id="txtMatrixHeader">BAG MATRIX LOGVIEW</span>
+            <span id="uiBagBadge" class="badge-count">0 Bags Loaded</span>
+        </div>
+        
+        <div class="entry-pad">
+            <input type="number" inputmode="decimal" step="0.1" id="uiQuickWeight" data-ph="qwPh" placeholder="Bag weight (kg) → Enter" onkeydown="if(event.key==='Enter'){event.preventDefault();addQuickWeight();}">
+            <button type="button" class="qw-add" onclick="addQuickWeight()" data-i="qwAdd">➕ Add</button>
+            <button type="button" class="qw-undo" onclick="undoLastWeight()" data-i="qwUndo">↩ Undo</button>
+        </div>
+        <div class="qw-meta" id="qwMeta"></div>
+        <div class="qw-hint" data-i="qwHint">Read the slip column by column, top to bottom. Type each weight and press Enter.</div>
+
+        <div class="matrix-scroll" id="uiMatrixContainer">
+            <div id="txtNoDataMessage" style="grid-column: span 3; text-align: center; color: #777; padding: 25px; font-size: 0.85rem;">
+                No active session data. Take a snapshot to run local processing loops.
+            </div>
+        </div>
+
+        <div class="row-grid" style="margin-top: 10px;">
+            <div class="field-box">
+                <label id="lblTare">Empty Jute Bag (kg)</label>
+                <input type="number" step="0.01" id="uiTareValue" value="0.60" oninput="runMathPipeline()">
+            </div>
+            <div class="field-box">
+                <label id="lblDust">Dust Loss (kg/Qtl)</label>
+                <input type="number" step="0.01" id="uiDustValue" value="1.00" oninput="runMathPipeline()">
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section" style="background: #fafafa; border-bottom: 1px solid var(--border);">
+        <div class="receipt-card">
+            <div class="receipt-line"><span id="txtGross">Gross Aggregate Weight:</span><span id="rGross">0.00 kg</span></div>
+            <div class="receipt-line" style="color:var(--alert);"><span id="txtTare">Tare Deduction Weight:</span><span id="rTare">- 0.00 kg</span></div>
+            <div class="receipt-line" style="color:var(--alert);"><span id="txtDust">Mandi Dust Deduction:</span><span id="rDust">- 0.00 kg</span></div>
+            <div class="receipt-line" style="font-weight: 600; margin-top:4px; padding-top:4px; border-top:1px dashed #ccc;">
+                <span id="txtNet">Net Settlement Weight:</span><span id="rNet">0.00 kg (0.00 Qtl)</span>
+            </div>
+            <div class="receipt-line bold-total">
+                <span id="txtPayout">NET PAYOUT VAL:</span><span id="rPayout">₹ 0</span>
+            </div>
+        </div>
+        <button class="btn-submit" id="txtBtnSubmit" onclick="commitCurrentSessionToDatabase()">💾 Commit Record to Log</button>
+    </div>
+
+    <div class="history-box">
+        <div class="history-topbar">
+            <h3 id="txtHistoryTitle">📜 Committed Ledger History</h3>
+            <button class="btn-export" onclick="exportDataToNativeExcel()">📤 Excel Export</button>
+        </div>
+        <div class="history-scroll-panel" id="uiHistoryContainer">
+            <div id="txtNoHistoryMsg" style="text-align: center; color: #888; padding: 30px; font-size: 0.85rem;">
+                No historical settlements compiled inside storage.
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="autoPopupModal">
+    <div class="modal-card">
+        <div class="modal-title" id="popTitle">✨ Review Extracted Profile</div>
+        <div class="modal-row"><span id="popFarmer">Farmer Name:</span> <span id="pFarmer">-</span></div>
+        <div class="modal-row"><span id="popVillage">Village:</span> <span id="pVillage">-</span></div>
+        <div class="modal-row"><span id="popVariety">Variety:</span> <span id="pVariety">-</span></div>
+        <div class="modal-row" style="background: var(--primary-surface); padding: 8px; border-radius: 6px; margin-top: 4px;">
+            <span id="popBags" style="color: var(--primary);">Total Bags Counted:</span> 
+            <span id="pBags" style="color: var(--primary); font-size: 1.1rem;">0</span>
+        </div>
+        <button class="modal-btn" id="popBtnClose" onclick="closeModal()">✅ Verify & Edit Weights</button>
+    </div>
+</div>
+
+<script>
+    const dictionary = {
+        en: {
+            appName: "🌾 Mandi Fast Ledger v12", btnScanCam: "📸 LIVE CAMERA", btnScanGal: "🖼️ GALLERY", btnVerifyText: "Verify",
+            loader: "⚡ Processing Field Image with Google Server...", lblKeyInput: "Key:", lblFarmer: "Farmer Name", 
+            lblVillage: "Village / गांव", lblCrop: "Crop Type", lblVariety: "Crop Variety / किस्म",
+            lblRate: "Market Rate (₹/Qtl)", lblStatus: "Status", optPending: "❌ Pending / बकाया", optPaid: "✅ Paid / चुकता",
+            txtMatrixHeader: "BAG MATRIX LOGVIEW", txtNoData: "No active session data. Take a snapshot to run local processing loops.",
+            lblTare: "Empty Jute Bag (kg)", lblDust: "Dust Loss (kg/Qtl)", txtGross: "Gross Aggregate Weight:",
+            txtTare: "Tare Deduction Weight:", txtDust: "Mandi Dust Deduction:", txtNet: "Net Settlement Weight:",
+            txtPayout: "NET PAYOUT VAL:", btnSubmit: "💾 Commit Record to Log",
+            popTitle: "✨ Review Extracted Profile", popFarmer: "Farmer Name:", popVillage: "Village:", popVariety: "Variety:",
+            popBags: "Total Bags Counted:", popBtnClose: "✅ Verify & Edit Weights",
+            txtDashTitle: "📊 Interactive Analytical Control Panel", lblDashAmt: "Total Amount", lblDashPaid: "Total Paid",
+            lblDashPending: "Pending Dues", lblDashVol: "Total Net Volume", lblDashBags: "Bags Purchased", lblDashPeople: "Total Farmers",
+            txtHistoryTitle: "📜 Committed Ledger History", txtNoHistoryMsg: "No historical settlements compiled inside storage.",
+            flbPeriod: "Period", flbStatus: "Status", flbVariety: "Variety"
+        },
+        hi: {
+            appName: "🌾 मण्डी फ़ास्ट लेजर v12", btnScanCam: "📸 लाइव कैमरा", btnScanGal: "🖼️ गैलरी से चुनें", btnVerifyText: "जांचें",
+            loader: "⚡ फ़ोटो प्रोसेसिंग जारी है...", lblKeyInput: "की (Key):", lblFarmer: "किसान का नाम", 
+            lblVillage: "गांव / पता", lblCrop: "फसल का प्रकार", lblVariety: "फसल की किस्म",
+            lblRate: "बाजार भाव (₹/क्विंटल)", lblStatus: "भुगतान स्थिति", optPending: "❌ बकाया पेमेंट", optPaid: "✅ चुकता पेमेंट",
+            txtMatrixHeader: "बोरी वजन विवरण तालिका", txtNoData: "कोई डेटा लोड नहीं है। नया रिकॉर्ड जोड़ने के लिए ऊपर बटन दबाकर फ़ोटो लें।",
+            lblTare: "खाली बारदाना वजन (किग्राम)", lblDust: "धूल/छनाई कटौती (किग्राम/क्विंटल)", txtGross: "कुल सकल वजन:",
+            txtTare: "कुल बारदाना वजन कटौती:", txtDust: "मण्डी धूल/मलाई कटौती:", txtNet: "शुद्ध सेटलमेंट वजन:",
+            txtPayout: "कुल शुद्ध भुगतान राशि:", btnSubmit: "💾 रिकॉर्ड मंडी खाते में सुरक्षित करें",
+            popTitle: "✨ निकाले गए विवरण की जांच करें", popFarmer: "किसान का नाम:", popVillage: "गांव / पता:", popVariety: "किस्म:",
+            popBags: "कुल बोरी संख्या (गिनती):", popBtnClose: "✅ विवरण सही है - वजन बदलें",
+            txtDashTitle: "📊 लाइव मण्डी डैशबोर्ड एनालिसिस", lblDashAmt: "कुल कुल रकम", lblDashPaid: "कुल चुकता भुगतान",
+            lblDashPending: "कुल बकाया राशि", lblDashVol: "कुल शुद्ध वजन", lblDashBags: "कुल खरीदी बोरियां", lblDashPeople: "कुल किसान संख्या",
+            txtHistoryTitle: "📜 सुरक्षित इतिहास लॉग खाता", txtNoHistoryMsg: "स्टोरेज के अंदर अभी कोई रिकॉर्ड सुरक्षित नहीं किया गया है।",
+            flbPeriod: "समय अवधि", flbStatus: "पेमेंट स्थिति", flbVariety: "किस्म / वैरायटी"
+        }
+    };
+
+    let currentLang = 'en';
+    let activeBagWeightsList = [];
+    let committedRecordsDatabase = [];
+
+    let currentCalculatedGross = 0;
+    let currentCalculatedNetKg = 0;
+    let currentCalculatedNetQtl = 0;
+    let currentCalculatedPayout = 0;
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const cachedKey = localStorage.getItem('mandi_gemini_api_key');
+        if (cachedKey) {
+            document.getElementById('globalApiKey').value = cachedKey;
+            refreshBadgeState(cachedKey);
+        }
+        
+        const savedLog = localStorage.getItem('mandi_historic_ledger_data');
+        if (savedLog) {
+            committedRecordsDatabase = JSON.parse(savedLog);
+        }
+        rebuildVarietyDropdownOptions();
+        rebuildDashboardMetrics();
+        renderHistoryListPanel();
+
+        loadScannedEntries();
+        applyScanLang();
+        renderScanDashboard();
+    });
+
+    function processManualKeyVerification() {
+        const inputVal = document.getElementById('globalApiKey').value.trim();
+        localStorage.setItem('mandi_gemini_api_key', inputVal);
+        refreshBadgeState(inputVal);
+        alert(inputVal.length > 10 ? "✅ Gemini API Key saved. AI scan enabled." : (inputVal.length === 0 ? "📴 Key removed. Offline manual-entry mode is active." : "❌ Key looks too short."));
+    }
+
+    function refreshBadgeState(keyVal) {
+        const badge = document.getElementById('keyStatusBadge');
+        if (keyVal.trim().length > 10) {
+            badge.innerText = "✅ Key Active";
+            badge.style.background = "var(--primary-surface)";
+            badge.style.color = "var(--primary)";
+        } else {
+            badge.innerText = "📴 Offline";
+            badge.style.background = "#eceff1";
+            badge.style.color = "#455a64";
+        }
+    }
+
+    function toggleLanguage(lang) {
+        currentLang = lang;
+        const dict = dictionary[lang];
+        
+        document.getElementById('txtAppName').innerText = dict.appName;
+        document.getElementById('lblKeyInput').innerText = dict.lblKeyInput;
+        document.getElementById('btnVerifyText').innerText = dict.btnVerifyText;
+        document.getElementById('txtBtnScanCam').firstChild.textContent = dict.btnScanCam + " ";
+        document.getElementById('txtBtnScanGal').firstChild.textContent = dict.btnScanGal + " ";
+        document.getElementById('lblFarmer').innerText = dict.lblFarmer;
+        document.getElementById('lblVillage').innerText = dict.lblVillage;
+        document.getElementById('lblCrop').innerText = dict.lblCrop;
+        document.getElementById('lblVariety').innerText = dict.lblVariety;
+        document.getElementById('lblRate').innerText = dict.lblRate;
+        document.getElementById('lblStatus').innerText = dict.lblStatus;
+        document.getElementById('optPending').innerText = dict.optPending;
+        document.getElementById('optPaid').innerText = dict.optPaid;
+        document.getElementById('txtMatrixHeader').innerText = dict.txtMatrixHeader;
+        
+        if(activeBagWeightsList.length === 0) {
+            document.getElementById('txtNoDataMessage').innerText = dict.txtNoData;
+        }
+        if(committedRecordsDatabase.length === 0) {
+            document.getElementById('txtNoHistoryMsg').innerText = dict.txtNoHistoryMsg;
+        }
+
+        document.getElementById('lblTare').innerText = dict.lblTare;
+        document.getElementById('lblDust').innerText = dict.lblDust;
+        document.getElementById('txtGross').innerText = dict.txtGross;
+        document.getElementById('txtTare').innerText = dict.txtTare;
+        document.getElementById('txtDust').innerText = dict.txtDust;
+        document.getElementById('txtNet').innerText = dict.txtNet;
+        document.getElementById('txtPayout').innerText = dict.txtPayout;
+        document.getElementById('txtBtnSubmit').innerText = dict.btnSubmit;
+        
+        document.getElementById('popTitle').innerText = dict.popTitle;
+        document.getElementById('popFarmer').innerText = dict.popFarmer;
+        document.getElementById('popVillage').innerText = dict.popVillage;
+        document.getElementById('popVariety').innerText = dict.popVariety;
+        document.getElementById('popBags').innerText = dict.popBags;
+        document.getElementById('popBtnClose').innerText = dict.popBtnClose;
+        
+        document.getElementById('txtDashTitle').innerText = dict.txtDashTitle;
+        document.getElementById('lblDashAmt').innerText = dict.lblDashAmt;
+        document.getElementById('lblDashPaid').innerText = dict.lblDashPaid;
+        document.getElementById('lblDashPending').innerText = dict.lblDashPending;
+        document.getElementById('lblDashVol').innerText = dict.lblDashVol;
+        document.getElementById('lblDashBags').innerText = dict.lblDashBags;
+        document.getElementById('lblDashPeople').innerText = dict.lblDashPeople;
+        document.getElementById('txtHistoryTitle').innerText = dict.txtHistoryTitle;
+        document.getElementById('flbPeriod').innerText = dict.flbPeriod;
+        document.getElementById('flbStatus').innerText = dict.flbStatus;
+        document.getElementById('flbVariety').innerText = dict.flbVariety;
+
+        applyScanLang();
+        renderScanDashboard();
+        rebuildDashboardMetrics();
+        renderHistoryListPanel();
+    }
+
+    document.getElementById('cameraTrigger').addEventListener('change', handleFileExtractionPipeline);
+    document.getElementById('galleryTrigger').addEventListener('change', handleFileExtractionPipeline);
+
+    function handleFileExtractionPipeline(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const scanSource = e.target.id === 'cameraTrigger' ? 'camera' : 'gallery';
+
+        const apiKey = document.getElementById('globalApiKey').value.trim();
+        if (!apiKey) {
+            // OFFLINE MODE: show the photo as a reference and start manual keypad entry
+            startManualFromPhoto(file);
+            e.target.value = '';
+            return;
+        }
+        showSlipPhoto(file);
+
+        document.getElementById('loaderIndicator').style.display = 'block';
+        document.getElementById('debugErrorDisplay').style.display = 'none';
+
+        const fileReader = new FileReader();
+        fileReader.onload = function(evt) {
+            const tempImg = new Image();
+            tempImg.onload = function() {
+                const highlyCompressedBase64 = compressImageForFieldNetwork(tempImg);
+                transmitToGeminiEngine(highlyCompressedBase64, apiKey, scanSource);
+            };
+            tempImg.src = evt.target.result;
+        };
+        fileReader.readAsDataURL(file);
+    }
+
+    function compressImageForFieldNetwork(imgElement) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        const targetWidth = 850; 
+        canvas.width = targetWidth;
+        canvas.height = (imgElement.height / imgElement.width) * targetWidth;
+        
+        context.filter = 'contrast(1.5) brightness(0.9)';
+        context.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.70);
+    }
+
+    async function transmitToGeminiEngine(base64Payload, key, scanSource) {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`;
+        
+        const textCommandPrompt = `You are an OCR system optimized for handwritten Mandi slips. Scan the provided image and extract:
+1. farmer_name
+2. village
+3. crop_type
+4. crop_variety
+5. weights (An array/list of all numbers representing individual bag weights. Read vertical columns top to bottom first).
+
+You must respond with a single JSON structure following this layout schema precisely:
+{
+  "farmer_name": "string or empty",
+  "village": "string or empty",
+  "crop_type": "string or empty",
+  "crop_variety": "string or empty",
+  "weights": [45.2, 50.1, 48.0]
+}`;
+
+        const transactionPayload = {
+            contents: [{
+                parts: [
+                    { text: textCommandPrompt },
+                    { inlineData: { mimeType: "image/jpeg", data: base64Payload.split(',')[1] } }
+                ]
+            }],
+            generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.1
+            }
+        };
+
+        try {
+            const apiCall = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(transactionPayload)
+            });
+            
+            if (!apiCall.ok) {
+                const errorData = await apiCall.json().catch(() => ({}));
+                const detailedMsg = errorData.error?.message || `HTTP Code ${apiCall.status}`;
+                throw new Error(`[Google API Rejection]: ${detailedMsg}`);
+            }
+            
+            const payloadJson = await apiCall.json();
+            
+            if (!payloadJson.candidates || !payloadJson.candidates[0].content.parts[0].text) {
+                throw new Error("[Structure Error]: Response structure is empty or filtered by safety triggers.");
+            }
+            
+            let rawText = payloadJson.candidates[0].content.parts[0].text.trim();
+            const extractedObj = JSON.parse(rawText);
+            
+            if(extractedObj.farmer_name) document.getElementById('uiFarmerName').value = extractedObj.farmer_name;
+            if(extractedObj.village) document.getElementById('uiVillage').value = extractedObj.village;
+            if(extractedObj.crop_type) document.getElementById('uiCropType').value = extractedObj.crop_type;
+            if(extractedObj.crop_variety) document.getElementById('uiCropVariety').value = extractedObj.crop_variety;
+
+            if(extractedObj.weights && Array.isArray(extractedObj.weights)) {
+                activeBagWeightsList = extractedObj.weights.map(num => parseFloat(num)).filter(num => !isNaN(num));
+                buildInteractiveMatrix(activeBagWeightsList);
+                triggerModalAlert(extractedObj.farmer_name, extractedObj.village, extractedObj.crop_variety, activeBagWeightsList.length);
+
+                // Persist every scan the moment it is read (before any commit)
+                if (activeBagWeightsList.length > 0) {
+                    activeScanId = recordScan({
+                        status: 'scanned', source: scanSource,
+                        farmerName: extractedObj.farmer_name || '',
+                        village: extractedObj.village || '',
+                        cropType: extractedObj.crop_type || '',
+                        cropVariety: extractedObj.crop_variety || '',
+                        weights: activeBagWeightsList.slice(),
+                        ocrWeights: activeBagWeightsList.slice()
+                    });
+                } else {
+                    activeScanId = null;
+                    recordScan({ status: 'failed', source: scanSource, error: 'No bag weights detected in image' });
+                }
+            } else {
+                activeScanId = null;
+                recordScan({ status: 'failed', source: scanSource, error: 'No weights array in response' });
+            }
+            
+            document.getElementById('loaderIndicator').style.display = 'none';
+        } catch (err) {
+            console.error(err);
+            document.getElementById('loaderIndicator').style.display = 'none';
+            
+            recordScan({ status: 'failed', source: scanSource, error: String(err && err.message || err).slice(0, 300) });
+            const logBox = document.getElementById('debugErrorDisplay');
+            logBox.innerText = `⚠️ Connection Failure Trace:\n${err.message}`;
+            logBox.style.display = 'block';
+        }
+    }
+
+    function triggerModalAlert(name, village, variety, totalBags) {
+        document.getElementById('pFarmer').innerText = name || 'Not Found';
+        document.getElementById('pVillage').innerText = village || 'Not Found';
+        document.getElementById('pVariety').innerText = variety || 'Not Found';
+        document.getElementById('pBags').innerText = totalBags;
+        document.getElementById('autoPopupModal').style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('autoPopupModal').style.display = 'none'; }
+
+    function buildInteractiveMatrix(weightsArray) {
+        if(weightsArray.length === 0) return;
+        document.getElementById('uiBagBadge').innerText = `${weightsArray.length} Bags`;
+        
+        const sum = weightsArray.reduce((acc, curr) => acc + curr, 0);
+        const meanAverage = sum / weightsArray.length;
+        
+        let matrixInnerHtml = '';
+        weightsArray.forEach((val, idx) => {
+            const deviationFlag = (val < meanAverage * 0.75 || val > meanAverage * 1.25);
+            const dynamicClass = deviationFlag ? 'alert-flash' : '';
+            
+            matrixInnerHtml += `
+                <div class="cell-item">
+                    <span class="cell-idx">#${idx + 1}</span>
+                    <input type="number" step="0.1" class="cell-val ${dynamicClass}" value="${val.toFixed(1)}" data-cellid="${idx}" oninput="syncManualCellEdit(this)">
+                </div>`;
+        });
+        
+        document.getElementById('uiMatrixContainer').innerHTML = matrixInnerHtml;
+        runMathPipeline();
+    }
+
+    function syncManualCellEdit(element) {
+        const lookupIdx = parseInt(element.getAttribute('data-cellid'));
+        const directVal = parseFloat(element.value);
+        if(!isNaN(directVal)) {
+            activeBagWeightsList[lookupIdx] = directVal;
+            runMathPipeline();
+            syncActiveScan();
+        }
+    }
+
+    function runMathPipeline() {
+        const count = activeBagWeightsList.length;
+        if (count === 0) { updateQuickMeta(); return; }
+        
+        currentCalculatedGross = activeBagWeightsList.reduce((acc, curr) => acc + curr, 0);
+        const tareConfig = parseFloat(document.getElementById('uiTareValue').value) || 0;
+        const totalTareLoss = count * tareConfig;
+        
+        const grossQuintals = currentCalculatedGross / 100;
+        const dustConfig = parseFloat(document.getElementById('uiDustValue').value) || 0;
+        const totalDustLoss = grossQuintals * dustConfig;
+        
+        currentCalculatedNetKg = Math.max(0, currentCalculatedGross - totalTareLoss - totalDustLoss);
+        currentCalculatedNetQtl = currentCalculatedNetKg / 100;
+        
+        const marketRate = parseFloat(document.getElementById('uiMarketRate').value) || 0;
+        currentCalculatedPayout = Math.round(currentCalculatedNetQtl * marketRate);
+        
+        document.getElementById('rGross').innerText = `${currentCalculatedGross.toFixed(2)} kg`;
+        document.getElementById('rTare').innerText = `- ${totalTareLoss.toFixed(2)} kg`;
+        document.getElementById('rDust').innerText = `- ${totalDustLoss.toFixed(2)} kg`;
+        document.getElementById('rNet').innerText = `${currentCalculatedNetKg.toFixed(2)} kg (${currentCalculatedNetQtl.toFixed(2)} Qtl)`;
+        document.getElementById('rPayout').innerText = `₹ ${currentCalculatedPayout.toLocaleString('en-IN')}`;
+        updateQuickMeta();
+    }
+
+    function commitCurrentSessionToDatabase() {
+        const nameInput = document.getElementById('uiFarmerName').value.trim();
+        if (activeBagWeightsList.length === 0 || !nameInput) {
+            alert(currentLang === 'hi' ? "❌ कोई एक्टिव डेटा या किसान का नाम मौजूद नहीं है।" : "❌ Cannot commit record: Verify farmer profile fields and load at least 1 bag slip snapshot.");
+            return;
+        }
+
+        const currentRecord = {
+            id: Date.now(),
+            timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            dateString: new Date().toLocaleDateString('en-IN'),
+            isoDate: new Date().toISOString().split('T')[0], // For structured calculation logic
+            farmerName: nameInput,
+            villageName: document.getElementById('uiVillage').value.trim() || 'Mandi Spot',
+            cropType: document.getElementById('uiCropType').value.trim(),
+            cropVariety: document.getElementById('uiCropVariety').value.trim() || 'N/A',
+            ratePerQtl: parseFloat(document.getElementById('uiMarketRate').value) || 0,
+            bagsCount: activeBagWeightsList.length,
+            grossWeight: currentCalculatedGross,
+            netWeightKg: currentCalculatedNetKg,
+            netWeightQtl: currentCalculatedNetQtl,
+            payoutAmount: currentCalculatedPayout,
+            paymentStatus: document.getElementById('uiPaymentStatus').value
+        };
+
+        committedRecordsDatabase.unshift(currentRecord);
+        localStorage.setItem('mandi_historic_ledger_data', JSON.stringify(committedRecordsDatabase));
+        markScanCommitted(currentRecord);
+        
+        // Reset working state variables
+        activeBagWeightsList = [];
+        document.getElementById('uiFarmerName').value = '';
+        document.getElementById('uiVillage').value = '';
+        document.getElementById('uiCropVariety').value = '';
+        document.getElementById('uiMatrixContainer').innerHTML = `
+            <div id="txtNoDataMessage" style="grid-column: span 3; text-align: center; color: #777; padding: 25px; font-size: 0.85rem;">
+                ${dictionary[currentLang].txtNoData}
+            </div>`;
+        document.getElementById('uiBagBadge').innerText = "0 Bags Loaded";
+        
+        document.getElementById('rGross').innerText = "0.00 kg";
+        document.getElementById('rTare').innerText = "- 0.00 kg";
+        document.getElementById('rDust').innerText = "- 0.00 kg";
+        document.getElementById('rNet').innerText = "0.00 kg (0.00 Qtl)";
+        document.getElementById('rPayout').innerText = "₹ 0";
+
+        rebuildVarietyDropdownOptions();
+        rebuildDashboardMetrics();
+        renderHistoryListPanel();
+        renderScanDashboard();
+        updateQuickMeta();
+        
+        alert(currentLang === 'hi' ? "✅ रिकॉर्ड मंडी खाते में सुरक्षित रूप से दर्ज हो गया है!" : "✅ Transaction successfully saved and synchronized into persistent ledger.");
+    }
+
+    // NEW ENGINE FUNCTIONALITY: DYNAMIC FILTER OPTIONS POPULATION
+    function rebuildVarietyDropdownOptions() {
+        const dropdown = document.getElementById('filterVariety');
+        const currentSelection = dropdown.value;
+        
+        // Extract unique variety slugs
+        const uniqueVarieties = [...new Set(committedRecordsDatabase.map(item => item.cropVariety))];
+        
+        let selectHtml = `<option value="All">${currentLang === 'hi' ? 'सभी किस्में' : 'All Varieties'}</option>`;
+        uniqueVarieties.forEach(v => {
+            if(v && v !== 'N/A') {
+                selectHtml += `<option value="${esc(v)}">${esc(v)}</option>`;
+            }
+        });
+        dropdown.innerHTML = selectHtml;
+        dropdown.value = currentSelection; // Keep existing choice if valid
+    }
+
+    // NEW ENGINE FUNCTIONALITY: multi-parameter database segment processor
+    function rebuildDashboardMetrics() {
+        const periodFilter = document.getElementById('filterPeriod').value;
+        const statusFilter = document.getElementById('filterStatus').value;
+        const varietyFilter = document.getElementById('filterVariety').value;
+
+        let filteredAmount = 0;
+        let filteredPaid = 0;
+        let filteredPending = 0;
+        let filteredVolumeQtl = 0;
+        let filteredBags = 0;
+        
+        const distinctFarmersList = new Set();
+
+        const todayIsoString = new Date().toISOString().split('T')[0];
+        const processingDateLimit = new Date();
+        processingDateLimit.setDate(processingDateLimit.getDate() - 7);
+
+        committedRecordsDatabase.forEach(item => {
+            // Evaluative Loop 1: Period Validation
+            if (periodFilter === 'Today' && item.isoDate !== todayIsoString) return;
+            if (periodFilter === 'Past7') {
+                const itemDateObj = new Date(item.isoDate);
+                if (itemDateObj < processingDateLimit) return;
+            }
+
+            // Evaluative Loop 2: Status Validation
+            if (statusFilter !== 'All' && item.paymentStatus !== statusFilter) return;
+
+            // Evaluative Loop 3: Variety Validation
+            if (varietyFilter !== 'All' && item.cropVariety !== varietyFilter) return;
+
+            // Compute values if safe
+            filteredAmount += item.payoutAmount;
+            filteredVolumeQtl += item.netWeightQtl;
+            filteredBags += item.bagsCount;
+            distinctFarmersList.add(item.farmerName.toLowerCase().trim());
+
+            if (item.paymentStatus === 'Paid') {
+                filteredPaid += item.payoutAmount;
+            } else {
+                filteredPending += item.payoutAmount;
+            }
+        });
+
+        // Push calculated data onto active UI nodes
+        document.getElementById('dTotalAmount').innerText = `₹ ${filteredAmount.toLocaleString('en-IN')}`;
+        document.getElementById('dTotalPaid').innerText = `₹ ${filteredPaid.toLocaleString('en-IN')}`;
+        document.getElementById('dTotalPending').innerText = `₹ ${filteredPending.toLocaleString('en-IN')}`;
+        document.getElementById('dTotalVolume').innerText = `${filteredVolumeQtl.toFixed(2)} Qtl`;
+        
+        const bagsSuffix = currentLang === 'hi' ? " बोरियां" : " Bags";
+        document.getElementById('dTotalBags').innerText = filteredBags + bagsSuffix;
+        
+        const farmerSuffix = currentLang === 'hi' ? " किसान" : " Persons";
+        document.getElementById('dTotalPeople').innerText = distinctFarmersList.size + farmerSuffix;
+    }
+
+    function renderHistoryListPanel() {
+        const container = document.getElementById('uiHistoryContainer');
+        if (committedRecordsDatabase.length === 0) {
+            container.innerHTML = `
+                <div id="txtNoHistoryMsg" style="text-align: center; color: #888; padding: 30px; font-size: 0.85rem;">
+                    ${dictionary[currentLang].txtNoHistoryMsg}
+                </div>`;
+            return;
+        }
+
+        let historyHtml = '';
+        committedRecordsDatabase.forEach(rec => {
+            const badgeBg = rec.paymentStatus === 'Paid' ? 'var(--primary-surface)' : 'var(--alert-bg)';
+            const badgeColor = rec.paymentStatus === 'Paid' ? 'var(--primary)' : 'var(--alert)';
+            const badgeText = rec.paymentStatus === 'Paid' ? (currentLang === 'hi' ? '✅ चुकता' : 'Paid') : (currentLang === 'hi' ? '❌ बकाया' : 'Pending');
+
+            historyHtml += `
+                <div class="history-item">
+                    <div class="history-meta-details">
+                        <span class="hist-title">${esc(rec.farmerName)} (${esc(rec.villageName)})</span>
+                        <span class="hist-subtitle">${rec.bagsCount} Bags • ${esc(rec.cropType)} [${esc(rec.cropVariety)}] • ${rec.dateString}</span>
+                    </div>
+                    <div class="hist-financials">
+                        <div>₹ ${rec.payoutAmount.toLocaleString('en-IN')}</div>
+                        <span class="hist-badge" style="background: ${badgeBg}; color: ${badgeColor};">${badgeText}</span>
+                    </div>
+                </div>`;
+        });
+        container.innerHTML = historyHtml;
+    }
+
+    function exportDataToNativeExcel() {
+        if (committedRecordsDatabase.length === 0) {
+            alert(currentLang === 'hi' ? "❌ निर्यात करने के लिए कोई ऐतिहासिक डेटा मौजूद नहीं है।" : "❌ Export Interrupted: No persistent records discovered in local memory workspace.");
+            return;
+        }
+
+        let dataStringOutput = "\uFEFF"; // Force UTF-8 BOM
+        dataStringOutput += "Transaction Date,Farmer Name,Village Location,Crop,Variety,Market Rate (INR per Qtl),Bags Count,Gross Weight (kg),Net Weight (kg),Calculated Quintals,Net Payout Amount (INR),Payment Status\n";
+        
+        committedRecordsDatabase.forEach(row => {
+            dataStringOutput += `"${row.dateString} ${row.timestamp}","${row.farmerName}","${row.villageName}","${row.cropType}","${row.cropVariety}",${row.ratePerQtl},${row.bagsCount},${row.grossWeight.toFixed(2)},${row.netWeightKg.toFixed(2)},${row.netWeightQtl.toFixed(2)},${row.payoutAmount},"${row.paymentStatus}"\n`;
+        });
+
+        const timestampSlug = new Date().toISOString().slice(0,10);
+        saveTextFile(`Mandi_Ledger_Report_${timestampSlug}.csv`, dataStringOutput);
+    }
+    /* =====================================================================
+       SCANNED ENTRIES — local storage + dashboard
+       Key: mandi_scanned_entries_v1  (array, newest first)
+       ===================================================================== */
+    const SCAN_STORE_KEY = 'mandi_scanned_entries_v1';
+    let scannedEntries = [];
+    let activeScanId = null;
+    const SCAN_RENDER_LIMIT = 150;
+
+    const scanDict = {
+        en: {
+            sdTitle: "📷 Scanned Entries Dashboard", sdPeriod: "Period", sdStatus: "Status",
+            sdAllTime: "All Time", sdToday: "Today", sdPast7: "Past 7 Days",
+            sdAllStatus: "All Status", sdAwaiting: "Awaiting Commit", sdCommitted: "Committed", sdFailed: "Failed",
+            sdSearchPh: "Search farmer / village",
+            sdTotalScans: "Total Scans", sdBags: "Bags Scanned", sdGross: "Gross Weight", sdFarmers: "Farmers",
+            sdAwaitingLbl: "Awaiting Commit", sdCommittedLbl: "Committed",
+            sdExport: "📤 Export CSV", sdClear: "🗑 Clear",
+            sdEmpty: "No scanned entries yet. Every scan is saved here automatically.",
+            sdLoad: "↩ Load", sdDelete: "Delete", sdBagsWord: "Bags", sdShowing: "Showing", sdOf: "of", sdFailedWord: "failed",
+            sdConfirmDel: "Delete this scanned entry? (The committed ledger is not affected.)",
+            sdConfirmClear: "Delete ALL scanned entries? The committed ledger is NOT affected. This cannot be undone.",
+            sdConfirmReplace: "A session is already loaded. Replace it with this scan?",
+            sdNoExport: "❌ No scanned entries to export.", sdUnnamed: "(Unnamed)", sdCamera: "Camera", sdGallery: "Gallery",
+            sdStorageFull: "⚠️ Could not save scan history (storage full).",
+            qwPh: "Bag weight (kg) → Enter", qwAdd: "➕ Add", qwUndo: "↩ Undo",
+            qwHint: "Read the slip column by column, top to bottom. Type each weight and press Enter.",
+            qwBad: "Enter a weight between 0 and 300 kg", qwBags: "Bags", qwTotal: "Total", qwLast: "Last",
+            svTitle: "Slip photo (reference)", svZoom: "tap to zoom"
+        },
+        hi: {
+            sdTitle: "📷 स्कैन किए गए रिकॉर्ड डैशबोर्ड", sdPeriod: "समय अवधि", sdStatus: "स्थिति",
+            sdAllTime: "सभी समय", sdToday: "आज", sdPast7: "पिछले 7 दिन",
+            sdAllStatus: "सभी स्थिति", sdAwaiting: "सेव होना बाकी", sdCommitted: "खाते में सेव", sdFailed: "असफल",
+            sdSearchPh: "किसान / गांव खोजें",
+            sdTotalScans: "कुल स्कैन", sdBags: "स्कैन की गई बोरियां", sdGross: "कुल सकल वजन", sdFarmers: "किसान",
+            sdAwaitingLbl: "सेव होना बाकी", sdCommittedLbl: "खाते में सेव",
+            sdExport: "📤 CSV निर्यात", sdClear: "🗑 साफ़ करें",
+            sdEmpty: "अभी कोई स्कैन नहीं है। हर स्कैन यहाँ अपने-आप सुरक्षित होता है।",
+            sdLoad: "↩ खोलें", sdDelete: "हटाएं", sdBagsWord: "बोरियां", sdShowing: "दिख रहे", sdOf: "में से", sdFailedWord: "असफल",
+            sdConfirmDel: "यह स्कैन रिकॉर्ड हटाएं? (मण्डी खाता प्रभावित नहीं होगा।)",
+            sdConfirmClear: "सभी स्कैन रिकॉर्ड हटाएं? मण्डी खाता प्रभावित नहीं होगा। यह वापस नहीं होगा।",
+            sdConfirmReplace: "एक सत्र पहले से खुला है। इसे इस स्कैन से बदलें?",
+            sdNoExport: "❌ निर्यात के लिए कोई स्कैन रिकॉर्ड नहीं है।", sdUnnamed: "(नाम नहीं)", sdCamera: "कैमरा", sdGallery: "गैलरी",
+            sdStorageFull: "⚠️ स्कैन इतिहास सेव नहीं हो सका (स्टोरेज भरा है)।",
+            qwPh: "बोरी का वजन (किग्रा) → Enter", qwAdd: "➕ जोड़ें", qwUndo: "↩ पीछे",
+            qwHint: "पर्ची को कॉलम-दर-कॉलम ऊपर से नीचे पढ़ें। हर वजन लिखकर Enter दबाएं।",
+            qwBad: "0 से 300 किग्रा के बीच वजन लिखें", qwBags: "बोरियां", qwTotal: "कुल", qwLast: "अंतिम",
+            svTitle: "पर्ची फ़ोटो (संदर्भ)", svZoom: "ज़ूम के लिए दबाएं"
+        }
+    };
+    function sdT(key) { return (scanDict[currentLang] || scanDict.en)[key] || scanDict.en[key] || key; }
+
+    function esc(v) {
+        return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function localIsoDate(d) {
+        d = d || new Date();
+        const p = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    }
+    function csvCell(v) { return `"${String(v == null ? '' : v).replace(/"/g, '""')}"`; }
+
+    function applyScanLang() {
+        document.querySelectorAll('[data-i]').forEach(el => { el.innerText = sdT(el.getAttribute('data-i')); });
+        document.querySelectorAll('[data-ph]').forEach(el => { el.placeholder = sdT(el.getAttribute('data-ph')); });
+    }
+
+    function loadScannedEntries() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(SCAN_STORE_KEY) || '[]');
+            scannedEntries = Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            console.error('Scan store unreadable, starting empty', e);
+            scannedEntries = [];
+        }
+    }
+
+    function persistScannedEntries() {
+        try {
+            localStorage.setItem(SCAN_STORE_KEY, JSON.stringify(scannedEntries));
+            return true;
+        } catch (e) {
+            console.error(e);
+            alert(sdT('sdStorageFull'));
+            return false;
+        }
+    }
+
+    function recordScan(data) {
+        const now = new Date();
+        const weights = Array.isArray(data.weights) ? data.weights : [];
+        const entry = Object.assign({
+            id: now.getTime().toString(36) + Math.random().toString(36).slice(2, 6),
+            ts: now.getTime(),
+            isoDate: localIsoDate(now),
+            dateString: now.toLocaleDateString('en-IN'),
+            timeString: now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}),
+            source: 'gallery', status: 'scanned',
+            farmerName: '', village: '', cropType: '', cropVariety: '',
+            weights: [], ocrWeights: [], error: '', ledgerId: null
+        }, data);
+        entry.bagsCount = weights.length;
+        entry.grossWeight = weights.reduce((a, b) => a + b, 0);
+        scannedEntries.unshift(entry);
+        persistScannedEntries();
+        renderScanDashboard();
+        return entry.id;
+    }
+
+    // Called when the working session is committed to the ledger
+    function markScanCommitted(ledgerRecord) {
+        if (!activeScanId) return;
+        const e = scannedEntries.find(x => x.id === activeScanId);
+        if (e) {
+            e.status = 'committed';
+            e.ledgerId = ledgerRecord.id;
+            e.farmerName = ledgerRecord.farmerName;
+            e.village = ledgerRecord.villageName;
+            e.cropType = ledgerRecord.cropType;
+            e.cropVariety = ledgerRecord.cropVariety;
+            e.weights = activeBagWeightsList.slice();   // final (possibly hand-corrected) weights
+            e.bagsCount = e.weights.length;
+            e.grossWeight = e.weights.reduce((a, b) => a + b, 0);
+            persistScannedEntries();
+        }
+        activeScanId = null;
+    }
+
+    function getFilteredScans() {
+        const period = document.getElementById('sdFilterPeriod').value;
+        const status = document.getElementById('sdFilterStatus').value;
+        const q = document.getElementById('sdSearch').value.trim().toLowerCase();
+        const today = localIsoDate();
+        const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        return scannedEntries.filter(e => {
+            if (period === 'Today' && e.isoDate !== today) return false;
+            if (period === 'Past7' && e.ts < weekAgo) return false;
+            if (status !== 'All' && e.status !== status) return false;
+            if (q && !((e.farmerName || '') + ' ' + (e.village || '')).toLowerCase().includes(q)) return false;
+            return true;
+        });
+    }
+
+    function renderScanDashboard() {
+        if (!document.getElementById('sdList')) return;
+        const rows = getFilteredScans();
+        const good = rows.filter(e => e.status !== 'failed');
+        const failedCount = rows.length - good.length;
+
+        const bags = good.reduce((a, e) => a + (e.bagsCount || 0), 0);
+        const grossKg = good.reduce((a, e) => a + (e.grossWeight || 0), 0);
+        const farmers = new Set(good.map(e => (e.farmerName || '').toLowerCase().trim()).filter(Boolean));
+
+        document.getElementById('sdTotalScans').innerText = good.length;
+        document.getElementById('sdBags').innerText = bags;
+        document.getElementById('sdGross').innerText = (grossKg / 100).toFixed(2) + ' Qtl';
+        document.getElementById('sdFarmers').innerText = farmers.size;
+        document.getElementById('sdAwaiting').innerText = good.filter(e => e.status === 'scanned').length;
+        document.getElementById('sdCommitted').innerText = good.filter(e => e.status === 'committed').length;
+
+        const shown = rows.slice(0, SCAN_RENDER_LIMIT);
+        document.getElementById('sdCount').innerText =
+            `${sdT('sdShowing')} ${shown.length} ${sdT('sdOf')} ${rows.length}` + (failedCount ? ` • ${failedCount} ${sdT('sdFailedWord')}` : '');
+
+        const list = document.getElementById('sdList');
+        if (shown.length === 0) {
+            list.innerHTML = `<div class="sd-empty">${esc(sdT('sdEmpty'))}</div>`;
+            return;
+        }
+
+        const badgeText = { scanned: '⏳ ' + sdT('sdAwaiting'), committed: '✅ ' + sdT('sdCommitted'), failed: '⚠️ ' + sdT('sdFailed') };
+        list.innerHTML = shown.map(e => {
+            const srcIcon = e.source === 'camera' ? '📸' : (e.source === 'manual' ? '⌨️' : '🖼️');
+            const title = e.status === 'failed'
+                ? `${srcIcon} ${esc(e.dateString)} ${esc(e.timeString)}`
+                : `${esc(e.farmerName || sdT('sdUnnamed'))}${e.village ? ' (' + esc(e.village) + ')' : ''}`;
+            const sub = e.status === 'failed'
+                ? ''
+                : `<div class="sd-sub">${e.bagsCount} ${sdT('sdBagsWord')} • ${(e.grossWeight || 0).toFixed(1)} kg • ${esc(e.cropType || '-')}${e.cropVariety ? ' [' + esc(e.cropVariety) + ']' : ''}<br>${srcIcon} ${esc(e.dateString)} ${esc(e.timeString)}</div>`;
+            const err = e.status === 'failed' && e.error ? `<div class="sd-err">${esc(e.error)}</div>` : '';
+            const loadBtn = e.status === 'scanned'
+                ? `<button type="button" class="sd-act load" onclick="reopenScan('${e.id}')">${esc(sdT('sdLoad'))}</button>` : '';
+            return `<div class="sd-item">
+                <div class="sd-row1"><div class="sd-name">${title}</div><span class="sd-badge ${e.status}">${esc(badgeText[e.status] || e.status)}</span></div>
+                ${sub}${err}
+                <div class="sd-actions">${loadBtn}<button type="button" class="sd-act del" onclick="deleteScan('${e.id}')">${esc(sdT('sdDelete'))}</button></div>
+            </div>`;
+        }).join('');
+    }
+
+    function reopenScan(id) {
+        const e = scannedEntries.find(x => x.id === id);
+        if (!e || e.status !== 'scanned') return;
+        if (activeBagWeightsList.length > 0 && activeScanId !== id && !confirm(sdT('sdConfirmReplace'))) return;
+        document.getElementById('uiFarmerName').value = e.farmerName || '';
+        document.getElementById('uiVillage').value = e.village || '';
+        if (e.cropType) document.getElementById('uiCropType').value = e.cropType;
+        document.getElementById('uiCropVariety').value = e.cropVariety || '';
+        activeBagWeightsList = (e.weights || []).slice();
+        activeScanId = id;
+        buildInteractiveMatrix(activeBagWeightsList);
+        document.getElementById('uiFarmerName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function deleteScan(id) {
+        if (!confirm(sdT('sdConfirmDel'))) return;
+        scannedEntries = scannedEntries.filter(x => x.id !== id);
+        if (activeScanId === id) activeScanId = null;
+        persistScannedEntries();
+        renderScanDashboard();
+    }
+
+    function clearAllScans() {
+        if (scannedEntries.length === 0) return;
+        if (!confirm(sdT('sdConfirmClear'))) return;
+        scannedEntries = [];
+        activeScanId = null;
+        persistScannedEntries();
+        renderScanDashboard();
+    }
+
+    function toggleScanDash() {
+        const body = document.getElementById('sdBody');
+        const open = body.style.display !== 'none';
+        body.style.display = open ? 'none' : 'block';
+        document.getElementById('sdChevron').innerText = open ? '▸' : '▾';
+    }
+
+    function exportScansToCsv() {
+        const rows = getFilteredScans();
+        if (rows.length === 0) { alert(sdT('sdNoExport')); return; }
+        let out = "\uFEFFScan Date,Scan Time,Source,Status,Farmer Name,Village,Crop,Variety,Bags,Gross Weight (kg),Bag Weights (kg),Error\n";
+        rows.forEach(e => {
+            out += [csvCell(e.dateString), csvCell(e.timeString), csvCell(e.source), csvCell(e.status),
+                    csvCell(e.farmerName), csvCell(e.village), csvCell(e.cropType), csvCell(e.cropVariety),
+                    e.bagsCount || 0, (e.grossWeight || 0).toFixed(2), csvCell((e.weights || []).join(' ')), csvCell(e.error)].join(',') + "\n";
+        });
+        saveTextFile(`Mandi_Scanned_Entries_${localIsoDate()}.csv`, out);
+    }
+
+    /* File saving: native share sheet inside the Capacitor APK, normal download in a browser */
+    async function saveTextFile(filename, text) {
+        const cap = window.Capacitor;
+        if (cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform() && cap.Plugins && cap.Plugins.Filesystem && cap.Plugins.Share) {
+            try {
+                const res = await cap.Plugins.Filesystem.writeFile({ path: filename, data: text, directory: 'CACHE', encoding: 'utf8' });
+                await cap.Plugins.Share.share({ title: filename, url: res.uri, dialogTitle: filename });
+            } catch (err) {
+                if (err && /cancel/i.test(String(err.message || err))) return;
+                console.error(err);
+                alert('Export failed: ' + (err && err.message ? err.message : err));
+            }
+            return;
+        }
+        const blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.style.visibility = 'hidden';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    /* =====================================================================
+       OFFLINE MANUAL ENTRY (no API key needed)
+       ===================================================================== */
+    let slipPhotoUrl = null;
+
+    function showSlipPhoto(file) {
+        if (slipPhotoUrl) URL.revokeObjectURL(slipPhotoUrl);
+        slipPhotoUrl = URL.createObjectURL(file);
+        const img = document.getElementById('svImg');
+        img.classList.remove('zoomed');
+        img.src = slipPhotoUrl;
+        document.getElementById('slipViewer').style.display = 'block';
+    }
+    function closeSlipViewer() {
+        document.getElementById('slipViewer').style.display = 'none';
+        if (slipPhotoUrl) { URL.revokeObjectURL(slipPhotoUrl); slipPhotoUrl = null; }
+        document.getElementById('svImg').removeAttribute('src');
+    }
+
+    function resetSessionUi() {
+        activeBagWeightsList = [];
+        document.getElementById('uiMatrixContainer').innerHTML =
+            `<div id="txtNoDataMessage" style="grid-column: span 3; text-align: center; color: #777; padding: 25px; font-size: 0.85rem;">${dictionary[currentLang].txtNoData}</div>`;
+        document.getElementById('uiBagBadge').innerText = "0 Bags Loaded";
+        document.getElementById('rGross').innerText = "0.00 kg";
+        document.getElementById('rTare').innerText = "- 0.00 kg";
+        document.getElementById('rDust').innerText = "- 0.00 kg";
+        document.getElementById('rNet').innerText = "0.00 kg (0.00 Qtl)";
+        document.getElementById('rPayout').innerText = "₹ 0";
+        updateQuickMeta();
+    }
+
+    function startManualFromPhoto(file) {
+        if (activeBagWeightsList.length > 0 && !confirm(sdT('sdConfirmReplace'))) return;
+        showSlipPhoto(file);
+        activeScanId = null;
+        resetSessionUi();
+        ['uiFarmerName', 'uiVillage', 'uiCropVariety'].forEach(id => { document.getElementById(id).value = ''; });
+        document.getElementById('uiFarmerName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('uiFarmerName').focus();
+    }
+
+    function updateQuickMeta() {
+        const el = document.getElementById('qwMeta');
+        if (!el) return;
+        const n = activeBagWeightsList.length;
+        if (n === 0) { el.innerText = ''; return; }
+        const total = activeBagWeightsList.reduce((a, b) => a + b, 0);
+        el.innerText = `${sdT('qwBags')}: ${n} • ${sdT('qwTotal')}: ${total.toFixed(1)} kg • ${sdT('qwLast')}: ${activeBagWeightsList[n - 1].toFixed(1)}`;
+    }
+
+    function addQuickWeight() {
+        const input = document.getElementById('uiQuickWeight');
+        const v = parseFloat(input.value);
+        if (isNaN(v) || v <= 0 || v > 300) {
+            input.classList.add('bad');
+            setTimeout(() => input.classList.remove('bad'), 700);
+            input.focus();
+            return;
+        }
+        activeBagWeightsList.push(v);
+        if (!activeScanId) {
+            // first weight of a manual session -> create the scan entry (saved immediately)
+            activeScanId = recordScan({
+                status: 'scanned', source: 'manual',
+                farmerName: document.getElementById('uiFarmerName').value.trim(),
+                village: document.getElementById('uiVillage').value.trim(),
+                cropType: document.getElementById('uiCropType').value.trim(),
+                cropVariety: document.getElementById('uiCropVariety').value.trim(),
+                weights: activeBagWeightsList.slice(), ocrWeights: []
+            });
+        } else {
+            syncActiveScan();
+        }
+        buildInteractiveMatrix(activeBagWeightsList);
+        const box = document.getElementById('uiMatrixContainer');
+        box.scrollTop = box.scrollHeight;
+        input.value = '';
+        input.focus();
+    }
+
+    function undoLastWeight() {
+        if (activeBagWeightsList.length === 0) return;
+        activeBagWeightsList.pop();
+        if (activeBagWeightsList.length === 0) resetSessionUi();
+        else buildInteractiveMatrix(activeBagWeightsList);
+        syncActiveScan();
+        document.getElementById('uiQuickWeight').focus();
+    }
+
+    // Keep the saved scan entry in step with the working session (weights + profile fields)
+    function syncActiveScan() {
+        if (!activeScanId) return;
+        const e = scannedEntries.find(x => x.id === activeScanId);
+        if (!e) { activeScanId = null; return; }
+        if (e.status !== 'scanned') return;
+        e.weights = activeBagWeightsList.slice();
+        e.bagsCount = e.weights.length;
+        e.grossWeight = e.weights.reduce((a, b) => a + b, 0);
+        e.farmerName = document.getElementById('uiFarmerName').value.trim();
+        e.village = document.getElementById('uiVillage').value.trim();
+        e.cropType = document.getElementById('uiCropType').value.trim();
+        e.cropVariety = document.getElementById('uiCropVariety').value.trim();
+        persistScannedEntries();
+        renderScanDashboard();
+    }
+    ['uiFarmerName', 'uiVillage', 'uiCropType', 'uiCropVariety'].forEach(id =>
+        document.getElementById(id).addEventListener('input', syncActiveScan));
+</script>
+
+</body>
+</html>
